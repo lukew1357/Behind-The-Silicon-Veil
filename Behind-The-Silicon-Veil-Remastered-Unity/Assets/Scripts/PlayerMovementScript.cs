@@ -4,30 +4,39 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cinemachine;
 
-public class PlayerMovementScript : MonoBehaviour
+public class PlayerMovementScript : MonoBehaviour, IDataPersistence
 {
     [Header("Player Movement")]
     //player statistics
-    public float playerSpeed = 10f;
-    public float playerJumpPower = 15f;
+    [SerializeField] float playerSpeed = 10f;
+    [SerializeField] float playerJumpPower = 15f;
+    [SerializeField] float gravityScale = 3f;
+    [SerializeField] private Transform respawnPoint;
+    public float jumpLeniency = 0.7f;
     public int extraJumps = 1;
 
     //objects and components
     [SerializeField] LayerMask groundLayer;
     [SerializeField] Rigidbody2D rb;
     [SerializeField] Transform playerFeet;
+    [SerializeField] Animator animator;
+    [SerializeField] SpriteRenderer sr;
+    [SerializeField] BoxCollider2D coll;
+
 
     //variables that change in real time
     private int jumpCount = 0;
-    private bool isGrounded;
     private float mx;
+    private float newSpeed;
     private float jumpCoolDown;
+    private bool disableMovement = false;
+    private bool isGrounded = false;
     private bool isFacingRight = true;
 
     [Header("Wall Jump")]
     //player statistics
     public float wallSlideSpeed = 0.3f;
-    public float wallDistance = 0.55f;
+    public float wallDistance = 0.52f;
 
     //variables that change in real time
     public float wallJumpTime = 0.15f;
@@ -50,35 +59,75 @@ public class PlayerMovementScript : MonoBehaviour
     private bool canDash = true;
     private bool isDashing = false;
 
+    [Header("Camera and UI")]
+    [SerializeField] CinemachineVirtualCamera vCam1;
+    public GameObject deathScreen;
+    public GameObject blackScreen;
+    private SpriteRenderer deathScreenSr;
+    private SpriteRenderer blackScreenSr;
+    private bool deathScreenEnabled = false;
+    private float deathScreenCounter = 0f;
+
+    [Header("Script References")]
+    public GameData gameData;
+
+    
+
+    [Header("Abilities")]
+    public bool doubleJumpUnlocked = true;
     public bool dashUnlocked = true;
 
-    [Header("Camera Follow")]
-    [SerializeField] CinemachineVirtualCamera vCam1;
-
-
-
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
-        canDash = true;
+        rb = GetComponent<Rigidbody2D>();
+        animator = GetComponentInChildren<Animator>();
+        sr = GetComponentInChildren<SpriteRenderer>();
+        coll = GetComponent<BoxCollider2D>();
+
+        deathScreenSr = deathScreen.GetComponent<SpriteRenderer>();
+        blackScreenSr = blackScreen.GetComponent<SpriteRenderer>();
+    }
+
+    public void LoadData(GameData data)
+    {
+        this.transform.position = data.playerPosition;
+    }
+
+    public void SaveData(GameData data)
+    {
+        data.playerPosition = this.transform.position;
     }
 
     // Update is called once per frame
     void Update()
     {
+        CheckGrounded();
         if (Input.GetButtonDown("Jump"))
         {
             Jump();
         }
-        CheckGrounded();
         DashHandler();
     }
 
     private void FixedUpdate()
     {
+        if (disableMovement)
+        {
+            return;
+        }
         MovementHandler();
         WallJumpHandler();
         Dash();
+
+        if (gameData.health <= 0)
+        {
+            StartCoroutine(HandleDeath());
+        }
+        if (deathScreenEnabled)
+        {
+            DeathScreen();
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -114,8 +163,22 @@ public class PlayerMovementScript : MonoBehaviour
         if (!Mathf.Approximately(0, mx))
             transform.rotation = mx < 0 ? Quaternion.Euler(0, 180, 0) : Quaternion.identity;
 
+        //increases agility of player
+        if (mx > 0)
+        {
+            newSpeed = Mathf.Sqrt(Mathf.Sqrt(mx));
+        }
+        else if (mx < 0)
+        {
+            newSpeed = Mathf.Sqrt(Mathf.Sqrt(Mathf.Abs(mx))) * -1;
+        }
+        else
+        {
+            newSpeed = 0f;
+        }
+
         //gives player velocity
-        rb.velocity = new Vector2(mx * playerSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(newSpeed * playerSpeed, rb.velocity.y);
     }
 
     void WallJumpHandler()
@@ -164,11 +227,11 @@ public class PlayerMovementScript : MonoBehaviour
 
     void CheckGrounded()
     {
-        if (Physics2D.OverlapCircle(playerFeet.position, 0.1f, groundLayer))
+        if (Physics2D.OverlapCircle(playerFeet.position, 0.2f, groundLayer))
         {
             isGrounded = true;
             jumpCount = 0;
-            jumpCoolDown = Time.time + 0.2f;
+            jumpCoolDown = Time.time + jumpLeniency;
         }
         else if (Time.time < jumpCoolDown)
         {
@@ -201,7 +264,7 @@ public class PlayerMovementScript : MonoBehaviour
     {
         if (isDashing && dashTime >= Time.time)
         {
-            rb.velocity = new Vector2(dashDirection, 0.1f) * dashSpeed;
+            rb.velocity = new Vector2(dashDirection, 0.15f) * dashSpeed;
         }
         if (dashTime < Time.time)
         {
@@ -211,5 +274,58 @@ public class PlayerMovementScript : MonoBehaviour
         {
             canDash = true;
         }
+    }
+
+    private void UpdateAnimator()
+    {
+        animator.SetBool("isGrounded", isGrounded);
+        animator.SetFloat("movementX", rb.velocity.x);
+        animator.SetFloat("movementY", rb.velocity.y);
+    }
+
+    private IEnumerator HandleDeath()
+    {
+        // freeze player movemet
+        rb.gravityScale = 0;
+        disableMovement = true;
+        rb.velocity = Vector3.zero;
+        // prevent other collisions
+        coll.enabled = false;
+        // hide the player visual
+        sr.color = new Color(sr.color.r, sr.color.g, sr.color.b, 0);
+
+        // send off event that we died for other components in our system to pick up
+        GameEventsManager.instance.PlayerDeath();
+        yield return new WaitForSeconds(0.4f);
+        deathScreenEnabled = true;
+    }
+
+    private void DeathScreen()
+    {
+        deathScreenCounter += Time.deltaTime;
+        if (deathScreenCounter <= 2)
+        {
+            blackScreenSr.color = new Color(0, 0, 0, deathScreenCounter / 2);
+        }
+        if(deathScreenCounter > 1 && deathScreenCounter <= 3)
+        {
+            deathScreenSr.color = new Color(255, 255, 255, deathScreenCounter / 2);
+        }
+    }
+
+    private void Respawn()
+    {
+        // enable movement
+        rb.gravityScale = gravityScale;
+        coll.enabled = true;
+        disableMovement = false;
+        // show player visual
+        sr.color = new Color(sr.color.r, sr.color.g, sr.color.b, 1);
+        // move the player to the respawn point
+        this.transform.position = respawnPoint.position;
+        deathScreenEnabled = false;
+        deathScreenCounter = 0f;
+        blackScreenSr.color = new Color(0, 0, 0, 0);
+        deathScreenSr.color = new Color(255, 255, 255, 0);
     }
 }
