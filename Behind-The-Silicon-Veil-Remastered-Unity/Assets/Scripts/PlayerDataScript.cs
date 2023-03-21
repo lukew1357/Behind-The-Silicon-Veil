@@ -27,7 +27,7 @@ public class PlayerDataScript : MonoBehaviour, IDataPersistence
     // Start is called before the first frame update
     void Start()
     {
-        
+        GameEventsManager.instance.onCoinCollected += OnCoinCollected;
     }
 
     // Update is called once per frame
@@ -43,5 +43,10 @@ public class PlayerDataScript : MonoBehaviour, IDataPersistence
         }
         deathCountText.text = "Deaths: " + deathCount;
         coinsText.text = "Coins: " + coins;
+    }
+
+    private void OnCoinCollected()
+    {
+        coins++;
     }
 }
