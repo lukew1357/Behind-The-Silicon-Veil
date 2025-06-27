@@ -1,11 +1,43 @@
-# Behind-The-Silicon-Veil
-A 2D platformer game made using Unity. Coded in C# and solo developed by me.
+# Behind The Silicon Veil
 
-This project started as a much smaller project called "Under the Veil". It didn't amount to much as was purely a way to learn and refine my coding ability in C#.
+**Behind The Silicon Veil** is a 2D platformer game developed in Unity using C#. The project was built to explore core game development principles, including player movement, AI behaviour, and interactive environments, while enhancing my skills in both programming and game design.
 
-"Under the Veil" is a small test project that features a main character with two equipable abilities: A laser gun and a dash ability. The laser gun fired projectile objects that damaged moving enemies when they collided. The dash ability allowed the player to get out of sticky situations, but with a drawback of having a 3 second cooldown timer.
+The game features a dystopian setting where players navigate hidden dangers behind the digital facade of a futuristic world.
 
-These different abilities tested my coding ability and breadth. With this more refined project that I am creating, these abilities will return along with a plethera of new abilities.
-I am aiming to complete all of the code, game art and audio design as a solo project. I am excited to see the progress of this game.
+## Project Overview
 
--- Published: 18th March 2023
+Key features include:
+
+✅ Classic 2D platformer movement and controls  
+✅ Enemy AI with patrol, detection, and attack behaviours  
+✅ Player abilities such as jumping, dodging, and combat interactions  
+✅ Custom art assets designed to complement the atmospheric theme  
+✅ Modular code structure for scalability and future improvements  
+
+## Technologies & Tools
+
+- **Unity** game engine (2D)  
+- **C#** for all game logic and mechanics  
+- Custom sprite design and simple animations  
+- Git for version control  
+
+## Development Timeline
+
+The project was developed independently as part of my journey learning Unity and C#, with ongoing improvements based on playtesting and feedback.
+
+## Future Improvements
+
+Planned or potential enhancements include:
+
+- Expanding enemy types and improving AI complexity  
+- Adding new levels with unique challenges and environments  
+- Refining combat mechanics and player feedback  
+- Introducing sound design and atmospheric music  
+
+## About the Developer
+
+I'm an aspiring programmer with a background in both technical coding and creative problem-solving. This project represents my hands-on experience in bringing my first game concept to life from scratch.
+
+Other projects and code can be found on my GitHub profile: [lukew1357](https://github.com/lukew1357)  
+
+---
